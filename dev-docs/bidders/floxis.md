@@ -27,7 +27,7 @@ privacy_sandbox: no
 
 ### Note
 
-The Floxis bidder adapter enables integration with the Floxis programmatic advertising platform via Prebid.js. It supports banner, video, and native formats, and is designed for multi-partner, multi-region use. Please contact Floxis to set up your partner account and obtain the required parameters.
+The Floxis bidder adapter enables integration with the Floxis programmatic advertising platform via Prebid.js. It supports banner, video, and native formats with OpenRTB 2.x compliance. Please contact Floxis to set up your partner account and obtain the required parameters.
 
 ### Bid Params
 
@@ -35,41 +35,17 @@ The Floxis bidder adapter enables integration with the Floxis programmatic adver
 
 | Name | Scope | Description | Example | Type |
 |------|-------|-------------|---------|------|
+| `seat` | required | Seat identifier provided by Floxis | `"testSeat"` | `string` |
+| `region` | required | Region identifier for routing | `"us-e"` | `string` |
 | `partner` | required | Partner identifier provided by Floxis | `"floxis"` | `string` |
-| `placementId` | required | Placement identifier provided by Floxis | `123` | `integer` |
-| `bcat` | optional | Blocked advertiser categories (IAB taxonomy) | `['IAB1-1', 'IAB25-2']` | `array` |
-| `badv` | optional | Blocked advertiser domains | `['competitor.com', 'example.com']` | `array` |
-| `bapp` | optional | Blocked mobile app bundle IDs | `['com.example.app']` | `array` |
-| `battr` | optional | Blocked creative attributes | `[1, 2, 3]` | `array` |
-
-### ORTB Blocking Support
-
-The Floxis adapter supports OpenRTB blocking parameters in two ways:
-
-- **Bidder-specific blocking**: Configure blocking parameters directly in `params` for granular control
-- **Global blocking**: Configure `ortb2.bcat` and `ortb2.badv` in `pbjs.setConfig()` for site-wide blocking
-- **Category blocking**: Use `bcat` parameter with IAB category codes
-- **Advertiser blocking**: Use `badv` parameter with advertiser domains
-- **App blocking**: Use `bapp` parameter with mobile app bundle IDs
-- **Creative attribute blocking**: Use `battr` parameter with creative attribute IDs
 
 ### Floors Support
 
-The Floxis adapter supports Prebid.js floors module:
+The Floxis adapter supports the Prebid.js [Floors Module](https://docs.prebid.org/dev-docs/modules/floors.html). Floor values are automatically included in the OpenRTB request as `imp.bidfloor` and `imp.bidfloorcur`.
 
-- **Global floors**: Configure floors globally using `pbjs.setConfig({ floors: {...} })`
-- **AdUnit floors**: Set floor prices per ad unit using the `floors` object
-- **Dynamic floors**: Supports endpoint-based floor fetching
-- **Currency support**: Floors can be set in different currencies (converted automatically)
+### Privacy Support
 
-### First Party Data
-
-The adapter supports first party data through standard Prebid.js mechanisms:
-
-- **Global FPD**: Set via `ortb2` in `pbjs.setConfig()`
-- **AdUnit FPD**: Set via `ortb2Imp` on individual ad units
-- **User FPD**: Passed through `ortb2.user` object
-- **Site FPD**: Passed through `ortb2.site` object
+Privacy fields (GDPR, USP, GPP, COPPA) are handled by Prebid.js core and automatically included in the OpenRTB request.
 
 ### AdUnit Configuration for Banner
 
@@ -84,35 +60,11 @@ var adUnits = [{
     bids: [{
         bidder: 'floxis',
         params: {
-            partner: 'floxis',
-            placementId: 123,
-            bcat: ['IAB1-1', 'IAB25-2'],
-            badv: ['competitor.com', 'example.com'],
-            battr: [1, 2, 3]
+            seat: 'testSeat',
+            region: 'us-e',
+            partner: 'floxis'
         }
-    }],
-    floors: {
-        currency: 'USD',
-        schema: {
-            delimiter: '|',
-            fields: ['mediaType', 'size']
-        },
-        values: {
-            'banner|300x250': 0.50,
-            'banner|728x90': 0.75,
-            '*': 0.25
-        }
-    },
-    ortb2Imp: {
-        ext: {
-            data: {
-                adserver: {
-                    name: 'gam',
-                    adslot: '/1234/homepage'
-                }
-            }
-        }
-    }
+    }]
 }];
 ```
 
@@ -134,34 +86,11 @@ var adUnits = [{
     bids: [{
         bidder: 'floxis',
         params: {
-            partner: 'floxis',
-            placementId: 456,
-            bcat: ['IAB23', 'IAB24'],
-            badv: ['competitor.com']
+            seat: 'testSeat',
+            region: 'us-e',
+            partner: 'floxis'
         }
-    }],
-    floors: {
-        currency: 'USD',
-        schema: {
-            delimiter: '|',
-            fields: ['mediaType']
-        },
-        values: {
-            'video': 1.00,
-            '*': 0.50
-        }
-    },
-    ortb2Imp: {
-        ext: {
-            data: {
-                pbadslot: 'homepage-video',
-                adserver: {
-                    name: 'gam',
-                    adslot: '/1234/video'
-                }
-            }
-        }
-    }
+    }]
 }];
 ```
 
@@ -191,30 +120,11 @@ var adUnits = [{
     bids: [{
         bidder: 'floxis',
         params: {
-            partner: 'floxis',
-            placementId: 789,
-            bcat: ['IAB25-1', 'IAB25-2'],
-            bapp: ['com.example.app', 'com.competitor.app']
+            seat: 'testSeat',
+            region: 'us-e',
+            partner: 'floxis'
         }
-    }],
-    floors: {
-        currency: 'USD',
-        schema: {
-            delimiter: '|',
-            fields: ['mediaType']
-        },
-        values: {
-            'native': 0.75,
-            '*': 0.30
-        }
-    },
-    ortb2Imp: {
-        ext: {
-            data: {
-                pbadslot: 'homepage-native'
-            }
-        }
-    }
+    }]
 }];
 ```
 
@@ -225,34 +135,6 @@ var pbjs = pbjs || {};
 pbjs.que = pbjs.que || [];
 
 pbjs.que.push(function() {
-    // Configure global floors
-    pbjs.setConfig({
-        floors: {
-            enforcement: {
-                enforceJS: true,
-                enforcePBS: false,
-                floorDeals: true
-            },
-            auctionDelay: 100,
-            endpoint: {
-                url: 'https://yourdomain.com/floors_endpoint.json'
-            },
-            data: {
-                currency: 'USD',
-                modelVersion: 'new model 1.0',
-                skipRate: 0,
-                schema: {
-                    delimiter: '|',
-                    fields: ['gptSlot', 'adUnitCode']
-                },
-                values: {
-                    'homepage|div-gpt-ad-1234567890123-0': 0.50,
-                    '*': 0.25
-                }
-            }
-        }
-    });
-
     pbjs.addAdUnits([{
         code: 'div-gpt-ad-1234567890123-0',
         mediaTypes: {
@@ -263,23 +145,11 @@ pbjs.que.push(function() {
         bids: [{
             bidder: 'floxis',
             params: {
-                partner: 'floxis',
-                placementId: 123,
-                bcat: ['IAB23', 'IAB25-2'],
-                badv: ['competitor1.com', 'competitor2.com']
+                seat: 'testSeat',
+                region: 'us-e',
+                partner: 'floxis'
             }
-        }],
-        ortb2Imp: {
-            ext: {
-                data: {
-                    pbadslot: 'homepage-banner',
-                    adserver: {
-                        name: 'gam',
-                        adslot: '/1234/homepage'
-                    }
-                }
-            }
-        }
+        }]
     }]);
 
     pbjs.requestBids({
